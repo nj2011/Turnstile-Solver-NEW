@@ -43,7 +43,6 @@ INDEX_HTML = """
 <body class="bg-gray-900 text-gray-200 min-h-screen flex items-center justify-center">
     <div class="bg-gray-800 p-8 rounded-lg shadow-md max-w-2xl w-full border border-red-500">
         <h1 class="text-3xl font-bold mb-6 text-center text-red-500">Welcome to Turnstile Solver API</h1>
-
         <p class="mb-4 text-gray-300">Send a GET request to
            <code class="bg-red-700 text-white px-2 py-1 rounded">/turnstile</code> with query parameters:</p>
         <ul class="list-disc pl-6 mb-6 text-gray-300">
@@ -55,23 +54,20 @@ INDEX_HTML = """
             <p class="font-semibold mb-2 text-red-400">Example usage:</p>
             <code class="text-sm break-all text-red-300">/turnstile?url=https://example.com&sitekey=sitekey</code>
         </div>
-
         <p class="mb-4 text-gray-300">To pass a Cloudflare interstitial (IUAM) and harvest
            <strong>cf_clearance</strong>, use
            <code class="bg-red-700 text-white px-2 py-1 rounded">/cf_clearance</code>:</p>
         <ul class="list-disc pl-6 mb-6 text-gray-300">
             <li><strong>url</strong>: The protected page URL</li>
-            <li><strong>proxy</strong>: optional per-request proxy (cf_clearance is bound to the exit IP)</li>
+            <li><strong>proxy</strong>: optional per-request proxy</li>
             <li><strong>timeout</strong>: optional, seconds (default 60)</li>
         </ul>
         <div class="bg-gray-700 p-4 rounded-lg mb-6 border border-red-500">
             <p class="font-semibold mb-2 text-red-400">Example usage:</p>
             <code class="text-sm break-all text-red-300">/cf_clearance?url=https://example.com&proxy=http://user:pass@ip:port</code>
         </div>
-
         <p class="mb-6 text-gray-300">Poll <code class="bg-red-700 text-white px-2 py-1 rounded">/result?id=taskId</code>
            until <strong>status</strong> is <strong>ready</strong>.</p>
-
         <div class="bg-gray-700 p-4 rounded-lg mb-6">
             <p class="text-gray-200 font-semibold mb-3">Connect with Us</p>
             <div class="space-y-2 text-sm">
@@ -294,17 +290,14 @@ def create_app(config: BrowserConfig, threads: int = 4) -> Quart:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Turnstile / cf_clearance Solver API")
-    parser.add_argument('--no-headless', action='store_true',
-                        help='Show browser (default: headless)')
-    parser.add_argument('--useragent', type=str,
-                        help='Custom User-Agent (headless: default Chrome 150 + sec-ch-ua)')
-    parser.add_argument('--debug', action='store_true', help='Debug logging')
-    parser.add_argument('--browser_type', type=str, default='chrome',
-                        help='chromium, chrome, msedge, camoufox')
-    parser.add_argument('--thread', type=int, default=4, help='Max concurrent solves')
-    parser.add_argument('--proxy', action='store_true', help='Use proxies.txt')
+    parser.add_argument('--no-headless', action='store_true')
+    parser.add_argument('--useragent', type=str)
+    parser.add_argument('--debug', action='store_true')
+    parser.add_argument('--browser_type', type=str, default='chromium')
+    parser.add_argument('--thread', type=int, default=1)
+    parser.add_argument('--proxy', action='store_true')
     parser.add_argument('--host', type=str, default='0.0.0.0')
-    parser.add_argument('--port', type=str, default='5072')
+    parser.add_argument('--port', type=str, default=os.environ.get('PORT', '5072'))
     return parser.parse_args()
 
 
