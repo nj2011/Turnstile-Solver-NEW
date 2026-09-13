@@ -24,7 +24,7 @@ PROXIES_PATH = Path(__file__).resolve().parent.parent / 'proxies.txt'
 
 @dataclass
 class BrowserConfig:
-    browser_type: str = 'chrome'
+    browser_type: str = 'chromium'
     headless: bool = True
     useragent: Optional[str] = None
     sec_ch_ua: Optional[str] = None
@@ -76,7 +76,18 @@ async def launch_browser(config: BrowserConfig) -> Tuple[object, object]:
 
     driver = await async_playwright().start()
     args = ['--headless=new'] if config.headless else []
-    browser = await driver.chromium.launch(channel=config.browser_type, headless=False, args=args)
+
+    if config.browser_type in ('chrome', 'msedge'):
+        browser = await driver.chromium.launch(
+            channel=config.browser_type,
+            headless=False,
+            args=args,
+        )
+    else:
+        browser = await driver.chromium.launch(
+            headless=False,
+            args=args,
+        )
     return driver, browser
 
 
