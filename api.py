@@ -44,46 +44,16 @@ INDEX_HTML = """
     <div class="bg-gray-800 p-8 rounded-lg shadow-md max-w-2xl w-full border border-red-500">
         <h1 class="text-3xl font-bold mb-6 text-center text-red-500">Welcome to Turnstile Solver API</h1>
         <p class="mb-4 text-gray-300">Send a GET request to
-           <code class="bg-red-700 text-white px-2 py-1 rounded">/turnstile</code> with query parameters:</p>
+           <code class="bg-red-700 text-white px-2 py-1 rounded">/turnstile</code>:</p>
         <ul class="list-disc pl-6 mb-6 text-gray-300">
             <li><strong>url</strong>: The URL where Turnstile is to be validated</li>
             <li><strong>sitekey</strong>: The site key for Turnstile</li>
             <li><strong>action</strong> / <strong>cdata</strong>: optional widget bindings</li>
+            <li><strong>proxy</strong>: optional per-request proxy (user:pass@host:port or scheme://user:pass@host:port)</li>
         </ul>
         <div class="bg-gray-700 p-4 rounded-lg mb-6 border border-red-500">
-            <p class="font-semibold mb-2 text-red-400">Example usage:</p>
-            <code class="text-sm break-all text-red-300">/turnstile?url=https://example.com&sitekey=sitekey</code>
-        </div>
-        <p class="mb-4 text-gray-300">To pass a Cloudflare interstitial (IUAM) and harvest
-           <strong>cf_clearance</strong>, use
-           <code class="bg-red-700 text-white px-2 py-1 rounded">/cf_clearance</code>:</p>
-        <ul class="list-disc pl-6 mb-6 text-gray-300">
-            <li><strong>url</strong>: The protected page URL</li>
-            <li><strong>proxy</strong>: optional per-request proxy</li>
-            <li><strong>timeout</strong>: optional, seconds (default 60)</li>
-        </ul>
-        <div class="bg-gray-700 p-4 rounded-lg mb-6 border border-red-500">
-            <p class="font-semibold mb-2 text-red-400">Example usage:</p>
-            <code class="text-sm break-all text-red-300">/cf_clearance?url=https://example.com&proxy=http://user:pass@ip:port</code>
-        </div>
-        <p class="mb-6 text-gray-300">Poll <code class="bg-red-700 text-white px-2 py-1 rounded">/result?id=taskId</code>
-           until <strong>status</strong> is <strong>ready</strong>.</p>
-        <div class="bg-gray-700 p-4 rounded-lg mb-6">
-            <p class="text-gray-200 font-semibold mb-3">Connect with Us</p>
-            <div class="space-y-2 text-sm">
-                <p class="text-gray-300">
-                    Channel:
-                    <a href="https://t.me/D3_vin" class="text-red-300 hover:underline">https://t.me/D3_vin</a>
-                </p>
-                <p class="text-gray-300">
-                    Chat:
-                    <a href="https://t.me/D3vin_chat" class="text-red-300 hover:underline">https://t.me/D3vin_chat</a>
-                </p>
-                <p class="text-gray-300">
-                    GitHub:
-                    <a href="https://github.com/D3-vin" class="text-red-300 hover:underline">https://github.com/D3-vin</a>
-                </p>
-            </div>
+            <p class="font-semibold mb-2 text-red-400">Example:</p>
+            <code class="text-sm break-all text-red-300">/turnstile?url=https://example.com&sitekey=sitekey&proxy=user:pass@host:port</code>
         </div>
     </div>
 </body>
@@ -167,7 +137,9 @@ async def _run_solve(task_id: str, job: Callable[..., Awaitable[Optional[dict]]]
         start = time.time()
         try:
             driver, browser = await launch_browser(config)
-            context = await browser.new_context(**context_options(config, proxy))
+            ctx_opts = context_options(config, proxy)
+            logger.info(f"Solve {task_id[:8]} proxy={proxy or 'direct'}")
+            context = await browser.new_context(**ctx_opts)
             page = await context.new_page()
             if config.debug:
                 logger.debug(f"Solve task={task_id} proxy={proxy}")
@@ -219,6 +191,7 @@ def create_app(config: BrowserConfig, threads: int = 1) -> Quart:
         sitekey = request.args.get('sitekey')
         action = request.args.get('action')
         cdata = request.args.get('cdata')
+        per_request_proxy = request.args.get('proxy')
 
         if not url or not sitekey:
             return jsonify({
@@ -227,10 +200,12 @@ def create_app(config: BrowserConfig, threads: int = 1) -> Quart:
                 "errorDescription": "Both 'url' and 'sitekey' are required",
             }), 200
 
-        task_id = _new_task('turnstile', url=url, sitekey=sitekey)
-        proxy = pick_proxy(config.proxy_support)
+        chosen_proxy = per_request_proxy or pick_proxy(config.proxy_support)
+        logger.info(f"Turnstile task url={url} proxy={chosen_proxy or 'direct'}")
+
+        task_id = _new_task('turnstile', url=url, sitekey=sitekey, proxy=chosen_proxy)
         job = lambda page: _turnstile_job(page, url, sitekey, action, cdata)
-        asyncio.create_task(_run_solve(task_id, job, config, semaphore, proxy))
+        asyncio.create_task(_run_solve(task_id, job, config, semaphore, chosen_proxy))
         return jsonify({"errorId": 0, "taskId": task_id}), 200
 
     @app.route('/cf_clearance', methods=['GET'])
