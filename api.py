@@ -197,7 +197,7 @@ async def _run_solve(task_id: str, job: Callable[..., Awaitable[Optional[dict]]]
             await close_browser(driver, browser, config.debug)
 
 
-def create_app(config: BrowserConfig, threads: int = 4) -> Quart:
+def create_app(config: BrowserConfig, threads: int = 1) -> Quart:
     app = Quart(__name__)
     semaphore = asyncio.Semaphore(threads)
 
@@ -297,7 +297,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--thread', type=int, default=1)
     parser.add_argument('--proxy', action='store_true')
     parser.add_argument('--host', type=str, default='0.0.0.0')
-    parser.add_argument('--port', type=str, default=os.environ.get('PORT', '5072'))
+    parser.add_argument('--port', type=int, default=int(os.environ.get('PORT', '5072')))
     return parser.parse_args()
 
 
@@ -337,7 +337,7 @@ def main() -> None:
     signal.signal(signal.SIGTERM, emergency_shutdown)
 
     try:
-        app.run(host=args.host, port=int(args.port))
+        app.run(host=args.host, port=args.port)
     except KeyboardInterrupt:
         emergency_shutdown(None, None)
 

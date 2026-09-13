@@ -1,6 +1,7 @@
 FROM python:3.11-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
 ENV PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -22,7 +23,6 @@ RUN python -m patchright install chromium
 
 COPY . .
 
-ENV PORT=5072
 EXPOSE 5072
 
-CMD ["sh", "-c", "python api.py --host 0.0.0.0 --port ${PORT}"]
+CMD ["python", "api.py", "--host", "0.0.0.0"]
